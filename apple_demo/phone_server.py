@@ -22,7 +22,7 @@ app = Flask(__name__)
 # 产品分类类别和场景分类类别
 class_name = ["phone_front", "phone_back", "ipad", "apple_watch", "airpods"]
 sense_class_name = ["other", "iphone_comp", "iphone_demo", "iphone_soip",
-                    "watch_comp", "watch_demo", "ipad_demo", "airpods_comp"]
+                    "watch_comp", "watch_demo", "ipad_demo", "airpods_comp", "single"]
 
 
 # 场景分类、目标检测、黑屏检测，返回json字符串
@@ -85,6 +85,8 @@ def operation(img_detect, debug_mode):
     sense_pre_class = class_sense[str(predict_cla)]
     sense_pre_prob = predict[predict_cla].numpy()
     sense_pre_class_index = sense_class_name.index(sense_pre_class)
+    if sense_pre_class_index == 8:
+        sense_pre_class_index = 0
 
     for class_index, class_det in enumerate(result):
         class_curr = class_name[class_index]
@@ -115,7 +117,7 @@ def operation(img_detect, debug_mode):
 
             # plt (left, upper, right, lower)
             img_cls = sense_cls.crop(pos_tuple)
-            plt.imshow(img_cls)
+            # plt.imshow(img_cls)
 
             # ---lock screen dect---
             if class_index == 0:
@@ -138,8 +140,8 @@ def operation(img_detect, debug_mode):
                 else:
                     res_dict['lockscreen'] = False
 
-                print_res = "class: {}   prob: {:.3}".format(pre_class, pre_prob)
-                plt.title(print_res)
+                # print_res = "class: {}   prob: {:.3}".format(pre_class, pre_prob)
+                # plt.title(print_res)
             # ----------------------
 
             if debug_mode == 1:
@@ -249,7 +251,7 @@ if __name__ == '__main__':
     # ---------------------------
 
     # ---sense detect init---
-    num_classes_sense = 8
+    num_classes_sense = 9
     sense_model = create_model(num_classes=num_classes_sense).to(device)
     model_weight_path_sense = "weights/convnext_tiny_1k_224_ema_sense_epoch_30.pth"
     sense_model.load_state_dict(torch.load(model_weight_path_sense, map_location=device))
