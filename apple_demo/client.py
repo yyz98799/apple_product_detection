@@ -16,12 +16,19 @@ def req(file_name):
     r = requests.post(url, data=req_data)
     j = json.loads(r.text)
     print(j)
+    # for i, index in enumerate(j['results']):
+    #     if i['type'] == 'phone_front' or i['type'] == 'phone_back':
+    #         print(i['img_base64'])
+    #         img = base64.b64decode(i['img_base64'])
+    #         with open(save_file_path + file_name + "_" + str(index), 'wb') as wf:
+    #             wf.write(img)
     return
 
 url = 'http://127.0.0.1:5000/iphone_api'
 
 repeat = 100
 read_file_path = "live_shot/"
+save_file_path = "phone_api_out/"
 # 输入文件格式
 pic_format = [".png", ".PNG", ".jpg", ".JPG", ".jpeg"]
 # 获取输入文件目录下所有文件

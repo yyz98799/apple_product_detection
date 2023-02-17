@@ -191,15 +191,15 @@ def api():
     res_return = operation(img_detect, debug_mode)
 
     # 存储传入json
-    in_json = json.dumps(data)
-    json_in = open(save_file_path + timestamp + "in" + ".json", "w")
-    json_in.write(in_json)
-    json_in.close()
+    # in_json = json.dumps(data)
+    # json_in = open(save_file_path + timestamp + "in" + ".json", "w")
+    # json_in.write(in_json)
+    # json_in.close()
     # 存储返回json
     res_json = json.dumps(res_return)
-    jw = open(save_file_path + timestamp + "out" + ".json", "w")
-    jw.write(res_json)
-    jw.close()
+    # jw = open(save_file_path + timestamp + "out" + ".json", "w")
+    # jw.write(res_json)
+    # jw.close()
     return jsonify(res_return)
 
 # class FlaskApp(Flask):
