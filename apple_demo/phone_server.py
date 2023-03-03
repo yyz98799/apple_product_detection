@@ -16,7 +16,6 @@ import base64
 
 from model import convnext_tiny as create_model
 
-
 app = Flask(__name__)
 
 # 产品分类类别和场景分类类别
@@ -62,12 +61,11 @@ def operation(img_detect, debug_mode):
     """
 
     dect_result = []
+    angles = []
+    res_dict = {}
     f = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     result = inference_detector(dete_model, img_detect)
 
-    # 65: remote, 67: cell phone
-    # bbox_result = [result[67]] + [result[65]]
-    res_dict = {}
 
     # 场景检测部分
     sense_cls = Image.fromarray(cv2.cvtColor(img_detect, cv2.COLOR_BGR2RGB))
@@ -87,6 +85,52 @@ def operation(img_detect, debug_mode):
     sense_pre_class_index = sense_class_name.index(sense_pre_class)
     if sense_pre_class_index == 8:
         sense_pre_class_index = 0
+
+    if sense_pre_class_index == 1:
+        result_mask = inference_detector(mask_model, img_detect)
+        mask = np.zeros((result_mask[1][0][0].shape[0], result_mask[1][0][0].shape[1]), dtype=bool)
+        # 65: remote, 67: cell phone
+        mask_class_list = [67, 65]
+
+        # result：类型为tuple，包含两项：
+        # result[0]：长度为80的二维ndarray List(对应MS COCO的80个类别)
+        # result[0][0]：二维ndarray，每行长度为5，对应各个mask的坐标(x1, y1, x2, y2)以及置信度
+        # result[1]：长度为80的List(对应MS COCO的80个类别)
+        # result[1][0]：二维ndarray List，每个mask对应一个二维ndarray
+        # result[1][0][0]：二维ndarray，数据类型为bool，大小为输入图片像素，值为True表示此像素包括在mask内
+        for mask_class in mask_class_list:
+            for index, i in enumerate(result_mask[0][mask_class]):
+                if i[4] > score_thr_mask:
+                    mask = mask | result_mask[1][mask_class][index]
+
+        uint8_mask = mask.astype(np.uint8) * 255
+        edges = cv2.Canny(uint8_mask, 100, 200)
+        contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        rectangles = []
+        for cnt in contours:
+            rect = cv2.minAreaRect(cnt)
+            if min(rect[1][0], rect[1][1]) < 140:
+                continue
+            rect_points = cv2.boxPoints(rect)
+            rect_points = np.int64(rect_points)
+            rectangles.append(rect_points)
+            center, box, angle = rect
+            angle = abs(angle)
+            if angle > 45:
+                angle = 90 - angle
+            angles.append(round(angle, 3))
+
+        # masklist = {mask_class: [] for mask_class in mask_class_list}
+        # for mask_class in mask_class_list:
+        #     for index, i in enumerate(result_mask[0][mask_class]):
+        #         if i[4] > score_thr_mask:
+        #             masklist[mask_class].append(index)
+        # flist = np.array([[False] * width] * height)
+        # for mask_class in mask_class_list:
+        #     if masklist[mask_class]:
+        #         for index in masklist[mask_class]:
+        #             k = np.array([(i or j) for i, j in np.nditer([flist, result_mask[1][mask_class][index]])])
+        #             flist = k.reshape(height, width)
 
     for class_index, class_det in enumerate(result):
         class_curr = class_name[class_index]
@@ -151,7 +195,8 @@ def operation(img_detect, debug_mode):
                 res_dict['img_base64'] = img_base64
                 mem_save.close()
             dect_result.append(res_dict)
-    response = {'scene_class': sense_pre_class_index, 'results': dect_result}
+    # response = {'scene_class': sense_pre_class_index, 'results': dect_result, 'mask': flist.tolist()}
+    response = {'scene_class': sense_pre_class_index, 'results': dect_result, 'angels': angles}
     # torch.cuda.empty_cache()
     return response
 
@@ -202,6 +247,7 @@ def api():
     # jw.close()
     return jsonify(res_return)
 
+
 # class FlaskApp(Flask):
 #     def __init__(self, *args, **kwargs):
 #         super(FlaskApp, self).__init__(*args, **kwargs)
@@ -218,13 +264,19 @@ if __name__ == '__main__':
     # 目标检测模型
     checkpoint_file = 'weights/ddod_r50_fpn_1x_apple_epoch_12.pth'
     config_file = 'ddod_r50_fpn_1x_apple.py'
+    checkpoint_file_mask = 'weights/mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco.pth'
+    config_file_mask = 'mask2former_swin-s-p4-w7-224_lsj_8x2_50e_coco.py'
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"using {device} device.")
     # 初始化检测器
     dete_model = init_detector(config_file, checkpoint_file, device=device)
+    mask_model = init_detector(config_file_mask, checkpoint_file_mask, device=device)
     # 检测阈值
     score_thr = 0.3
-
+    score_thr_mask = 0.3
+    # 图像尺寸
+    width = 720
+    height = 1280
     # 分类器设置
     num_classes = 2
     img_size = 224
