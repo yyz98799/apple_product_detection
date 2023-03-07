@@ -61,7 +61,7 @@ def operation(img_detect, debug_mode):
     """
 
     dect_result = []
-    angles = []
+    rects = []
     res_dict = {}
     f = time.strftime("%Y%m%d_%H%M%S", time.localtime())
     result = inference_detector(dete_model, img_detect)
@@ -118,7 +118,7 @@ def operation(img_detect, debug_mode):
             angle = abs(angle)
             if angle > 45:
                 angle = 90 - angle
-            angles.append(round(angle, 3))
+            rects.append([rect[0][0], rect[0][1], rect[1][0], rect[1][1], round(angle, 3)])
 
         # masklist = {mask_class: [] for mask_class in mask_class_list}
         # for mask_class in mask_class_list:
@@ -143,7 +143,7 @@ def operation(img_detect, debug_mode):
         inds = scores > score_thr
         bboxes = bboxes[inds, :]
         for i, box in enumerate(bboxes):
-            res_dict = {'center': False, 'lockscreen': False, 'reflection': False}
+            res_dict = {'lockscreen': False, 'reflection': False}
 
             left, upper, right, lower = int(box[0]), int(box[1]), int(box[2]), int(box[3])
             pos = [left, upper, right, lower]
@@ -196,7 +196,7 @@ def operation(img_detect, debug_mode):
                 mem_save.close()
             dect_result.append(res_dict)
     # response = {'scene_class': sense_pre_class_index, 'results': dect_result, 'mask': flist.tolist()}
-    response = {'scene_class': sense_pre_class_index, 'results': dect_result, 'angels': angles}
+    response = {'scene_class': sense_pre_class_index, 'results': dect_result, 'rects': rects}
     # torch.cuda.empty_cache()
     return response
 
@@ -219,7 +219,9 @@ def api():
     # Ascii码->图像
     img_detect = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     # -------------------------
-
+    # 如果图像过大，调整为720*1280
+    if img_detect.shape[0] > height:
+        img_detect = cv2.resize(img_detect, (width, height))
     # debug mode, 0为不返回图片base64, 1为返回
     debug_mode = data["debug_mode"]
 
@@ -229,7 +231,7 @@ def api():
     # cv2.imwrite(save_file_path + timestamp + ".png", img_detect)
 
     # 检测主函数
-    results = operation(img_detect, debug_mode)
+    # results = operation(img_detect, debug_mode)
 
     # json init
     # res_return = {'results': results}
