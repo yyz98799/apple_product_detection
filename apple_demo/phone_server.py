@@ -88,7 +88,8 @@ def operation(img_detect, debug_mode):
 
     if sense_pre_class_index == 1:
         result_mask = inference_detector(mask_model, img_detect)
-        mask = np.zeros((result_mask[1][0][0].shape[0], result_mask[1][0][0].shape[1]), dtype=bool)
+        # mask = np.zeros((result_mask[1][0][0].shape[0], result_mask[1][0][0].shape[1]), dtype=bool)
+        mask = np.zeros((height, width), dtype=bool)
         # 65: remote, 67: cell phone
         mask_class_list = [67, 65]
 
@@ -118,7 +119,8 @@ def operation(img_detect, debug_mode):
             angle = abs(angle)
             if angle > 45:
                 angle = 90 - angle
-            rects.append([rect[0][0], rect[0][1], rect[1][0], rect[1][1], round(angle, 3)])
+            rects.append([round(rect[0][0], 3), round(rect[0][1], 3), round(rect[1][0], 3), round(rect[1][1], 3),
+                          round(angle, 3)])
 
         # masklist = {mask_class: [] for mask_class in mask_class_list}
         # for mask_class in mask_class_list:
